@@ -24,7 +24,7 @@ export const applyStyleToImage = async (
   const base64ImageData = dataUrlToBase64(imageSrc);
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-image',
     contents: {
       parts: [
         {
@@ -66,7 +66,7 @@ export const generateMotionVideo = async (
   const base64ImageData = dataUrlToBase64(imageSrc);
 
   let operation = await ai.models.generateVideos({
-    model: 'veo-2.0-generate-001',
+    model: 'veo-3.0-generate-001',
     prompt: PROMPT,
     image: {
       imageBytes: base64ImageData,
