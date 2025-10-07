@@ -1,0 +1,7 @@
+{
+  "name": "Photobooth AI",
+  "description": "An interactive photobooth that transforms professional portraits into cinematic motion portraits with a futuristic theme, using AI to generate stunning backgrounds and effects.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

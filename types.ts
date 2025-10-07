@@ -1,0 +1,9 @@
+export enum AppState {
+  WELCOME,
+  CAPTURE,
+  PREVIEW,
+  STYLE_SELECTION,
+  STYLED_PREVIEW,
+  PROCESSING,
+  RESULT,
+}
