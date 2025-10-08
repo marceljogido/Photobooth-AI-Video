@@ -19,6 +19,7 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
 }) => {
   const [styledImage, setStyledImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,11 +81,17 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
           Different Style
         </button>
         <button
-          onClick={() => styledImage && onConfirm(styledImage)}
-          disabled={isLoading || !!error || !styledImage}
+          onClick={() => {
+            if (styledImage && !isProcessing) {
+              console.log("Tombol 'Create Motion Portrait' diklik");
+              setIsProcessing(true);
+              onConfirm(styledImage);
+            }
+          }}
+          disabled={isLoading || !!error || !styledImage || isProcessing}
           className="px-8 py-3 bg-[#F9D423] text-gray-900 font-bold text-lg rounded-full shadow-[0_0_15px_#F9D423] hover:scale-105 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
         >
-          Create Motion Portrait
+          {isProcessing ? 'Processing...' : 'Create Motion Portrait'}
         </button>
       </div>
     </div>

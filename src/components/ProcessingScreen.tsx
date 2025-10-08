@@ -30,6 +30,7 @@ const ProcessingScreen: React.FC<ProcessingScreenProps> = ({ imageSrc, onComplet
   }, []);
 
   useEffect(() => {
+    console.log("Memulai proses generateMotionVideo di ProcessingScreen");
     const processImage = async () => {
       try {
         const result = await generateMotionVideo(imageSrc);

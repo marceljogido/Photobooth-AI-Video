@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { KlgLogo } from './icons/KlgLogo';
 
 interface ResultScreenProps {
-  videoSrc: string;
+  videoSrc: string;  // Ini bisa berupa Blob URL sementara atau URL dari server
   onStartOver: () => void;
 }
 
 const ResultScreen: React.FC<ResultScreenProps> = ({ videoSrc, onStartOver }) => {
-  const downloadUrl = "https://example.com/klg-summit-2025/download"; // Placeholder URL
+  // Cleanup URL object jika ini masih blob URL
+  useEffect(() => {
+    return () => {
+      if (videoSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(videoSrc);
+      }
+    };
+  }, [videoSrc]);
 
   return (
     <div className="w-full h-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 p-4 md:p-8">
@@ -43,9 +50,18 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ videoSrc, onStartOver }) =>
         </p>
         
         <div className="p-3 bg-white rounded-lg shadow-lg mb-6 md:mb-8">
-            <QRCodeSVG value={downloadUrl} size={160} />
+          <QRCodeSVG value={videoSrc} size={160} />
         </div>
-
+        
+        {/* Tombol download */}
+        <a 
+          href={videoSrc} 
+          download="photobooth-video.mp4"
+          className="px-6 py-2 bg-[#F9D423] text-gray-900 font-semibold rounded-full hover:bg-[#e6c21c] transition-colors duration-300 mb-3"
+        >
+          Download Video
+        </a>
+        
         <button
           onClick={onStartOver}
           className="px-8 py-3 bg-gray-700 text-white font-semibold text-lg rounded-full hover:bg-gray-600 transition-colors duration-300"

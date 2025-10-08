@@ -7,6 +7,7 @@ import StyleSelectionScreen from './components/StyleSelectionScreen';
 import StyledPreviewScreen from './components/StyledPreviewScreen';
 import ProcessingScreen from './components/ProcessingScreen';
 import ResultScreen from './components/ResultScreen';
+import { uploadVideoToServer } from './services/geminiService';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.WELCOME);
@@ -58,9 +59,29 @@ const App: React.FC = () => {
     setAppState(AppState.PROCESSING);
   }, []);
 
-  const handleProcessingComplete = useCallback((videoUrl: string) => {
-    setGeneratedVideoUrl(videoUrl);
-    setAppState(AppState.RESULT);
+  const handleProcessingComplete = useCallback(async (videoUrl: string) => {
+    console.log("handleProcessingComplete dipanggil, videoUrl:", videoUrl);
+    try {
+      // Tampilkan dulu video sementara dari AI di ResultScreen
+      setGeneratedVideoUrl(videoUrl);
+      setAppState(AppState.RESULT);
+      
+      // Upload ke server di background
+      try {
+        const serverVideoUrl = await uploadVideoToServer(videoUrl);
+        console.log("Upload ke server berhasil, serverVideoUrl:", serverVideoUrl);
+        // Update URL hanya setelah upload selesai
+        setGeneratedVideoUrl(serverVideoUrl);
+      } catch (uploadError) {
+        console.error("Gagal mengupload video ke server:", uploadError);
+        // Tetap gunakan video sementara jika upload gagal
+        // Tapi mungkin tampilkan pesan bahwa download tidak tersedia
+      }
+    } catch (error) {
+      console.error("Error dalam handleProcessingComplete:", error);
+      setError("Terjadi kesalahan. Silakan coba lagi.");
+      setAppState(AppState.PREVIEW);
+    }
   }, []);
 
   const handleProcessingError = useCallback((errorMessage: string) => {
