@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/videos', videosRouter);
+app.use(['/api/videos', '/videos'], videosRouter);
 
 // Serve uploaded videos
 app.use('/uploads', express.static('uploads'));
