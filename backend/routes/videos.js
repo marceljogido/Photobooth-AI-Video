@@ -6,6 +6,28 @@ const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
+const buildDownloadUrl = (req, filename) => {
+  const downloadPath = `/uploads/videos/${filename}`;
+  const configuredBase = process.env.PUBLIC_BASE_URL || process.env.BASE_URL;
+
+  if (configuredBase) {
+    try {
+      return new URL(downloadPath, configuredBase).toString();
+    } catch (error) {
+      console.warn('Invalid PUBLIC_BASE_URL/BASE_URL value. Falling back to request host.', error);
+    }
+  }
+
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const protocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto
+    ? forwardedProto.split(',')[0]
+    : req.protocol;
+  const host = req.get('host');
+  return `${protocol}://${host}${downloadPath}`;
+};
+
 // Buat direktori uploads/videos jika belum ada
 const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'videos');
 if (!fs.existsSync(uploadDir)) {
@@ -64,7 +86,7 @@ router.post('/upload', upload.single('video'), (req, res) => {
   res.json({ 
     success: true, 
     videoId: videoId,
-    downloadUrl: `/uploads/videos/${req.file.filename}`
+    downloadUrl: buildDownloadUrl(req, req.file.filename)
   });
 });
 

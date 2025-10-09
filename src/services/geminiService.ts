@@ -63,7 +63,7 @@ export const generateMotionVideo = async (
 
   try {
     let operation = await ai.models.generateVideos({
-      model: 'veo-2.0-generate-001',  // Menggunakan model VEO 2 preview
+      model: 'veo-2.0-generate-001',  
       prompt: PROMPT,
       image: {
         imageBytes: base64ImageData,
@@ -145,7 +145,22 @@ export const uploadVideoToServer = async (videoUrl: string): Promise<string> => 
     
     const result = await uploadResponse.json();
     console.log("Upload result:", result);
-    return result.downloadUrl; // URL yang bisa digunakan untuk download
+
+    const rawDownloadUrl: unknown = result.downloadUrl;
+    if (typeof rawDownloadUrl !== 'string' || rawDownloadUrl.length === 0) {
+      throw new Error("Server tidak mengembalikan downloadUrl yang valid.");
+    }
+
+    let absoluteDownloadUrl: string;
+    if (/^https?:\/\//i.test(rawDownloadUrl)) {
+      absoluteDownloadUrl = rawDownloadUrl;
+    } else if (typeof window !== 'undefined' && window.location) {
+      absoluteDownloadUrl = new URL(rawDownloadUrl, window.location.origin).toString();
+    } else {
+      throw new Error("Tidak dapat menentukan URL absolut untuk download video.");
+    }
+
+    return absoluteDownloadUrl; // URL yang bisa digunakan untuk download
   } catch (error) {
     console.error("Error dalam uploadVideoToServer:", error);
     throw error;

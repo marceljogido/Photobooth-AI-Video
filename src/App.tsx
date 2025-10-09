@@ -14,7 +14,10 @@ const App: React.FC = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [selectedStylePrompt, setSelectedStylePrompt] = useState<string | null>(null);
   const [styledImage, setStyledImage] = useState<string | null>(null);
-  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [playbackVideoUrl, setPlaybackVideoUrl] = useState<string | null>(null);
+  const [shareableVideoUrl, setShareableVideoUrl] = useState<string | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleStart = useCallback(() => {
@@ -22,7 +25,10 @@ const App: React.FC = () => {
     setCapturedImage(null);
     setSelectedStylePrompt(null);
     setStyledImage(null);
-    setGeneratedVideoUrl(null);
+    setPlaybackVideoUrl(null);
+    setShareableVideoUrl(null);
+    setIsUploadingVideo(false);
+    setUploadError(null);
     setError(null);
   }, []);
 
@@ -62,30 +68,62 @@ const App: React.FC = () => {
   const handleProcessingComplete = useCallback(async (videoUrl: string) => {
     console.log("handleProcessingComplete dipanggil, videoUrl:", videoUrl);
     try {
-      // Tampilkan dulu video sementara dari AI di ResultScreen
-      setGeneratedVideoUrl(videoUrl);
+      // Tampilkan video sementara dari AI di ResultScreen sambil menyiapkan URL server
+      setPlaybackVideoUrl(videoUrl);
+      setShareableVideoUrl(null);
+      setUploadError(null);
+      setIsUploadingVideo(true);
       setAppState(AppState.RESULT);
       
       // Upload ke server di background
       try {
         const serverVideoUrl = await uploadVideoToServer(videoUrl);
         console.log("Upload ke server berhasil, serverVideoUrl:", serverVideoUrl);
-        // Update URL hanya setelah upload selesai
-        setGeneratedVideoUrl(serverVideoUrl);
+
+        // Simpan URL server hanya untuk keperluan sharing (QR & download)
+        setShareableVideoUrl(serverVideoUrl);
       } catch (uploadError) {
         console.error("Gagal mengupload video ke server:", uploadError);
         // Tetap gunakan video sementara jika upload gagal
-        // Tapi mungkin tampilkan pesan bahwa download tidak tersedia
+        setUploadError("Gagal menyiapkan tautan download. Scan QR akan aktif setelah unggah berhasil.");
       }
+      setIsUploadingVideo(false);
     } catch (error) {
       console.error("Error dalam handleProcessingComplete:", error);
       setError("Terjadi kesalahan. Silakan coba lagi.");
       setAppState(AppState.PREVIEW);
+      setPlaybackVideoUrl(null);
+      setShareableVideoUrl(null);
+      setIsUploadingVideo(false);
+      setUploadError(null);
     }
   }, []);
 
+  const handleRetryUpload = useCallback(async () => {
+    if (!playbackVideoUrl) {
+      return;
+    }
+
+    try {
+      setIsUploadingVideo(true);
+      setUploadError(null);
+      const serverVideoUrl = await uploadVideoToServer(playbackVideoUrl);
+      console.log("Retry upload berhasil, serverVideoUrl:", serverVideoUrl);
+      setShareableVideoUrl(serverVideoUrl);
+    } catch (retryError) {
+      console.error("Gagal mengupload video ke server saat retry:", retryError);
+      setUploadError("Gagal menyiapkan tautan download. Silakan coba lagi.");
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  }, [playbackVideoUrl]);
+
   const handleProcessingError = useCallback((errorMessage: string) => {
     setError(errorMessage);
+    setPlaybackVideoUrl(null);
+    setShareableVideoUrl(null);
+    setIsUploadingVideo(false);
+    setUploadError(null);
     setAppState(AppState.PREVIEW); // Go back to original preview on error
   }, []);
 
@@ -131,16 +169,25 @@ const App: React.FC = () => {
               onComplete={handleProcessingComplete} 
               onError={handleProcessingError} 
             />;
-        }
-        setAppState(AppState.CAPTURE);
-        return null;
-      case AppState.RESULT:
-        if(generatedVideoUrl) {
-            return <ResultScreen videoSrc={generatedVideoUrl} onStartOver={handleStart} />;
+      }
+      setAppState(AppState.CAPTURE);
+      return null;
+    case AppState.RESULT:
+        if(playbackVideoUrl) {
+            return (
+              <ResultScreen
+                videoSrc={playbackVideoUrl}
+                shareableUrl={shareableVideoUrl}
+                isUploading={isUploadingVideo}
+                uploadError={uploadError}
+                onRetryUpload={handleRetryUpload}
+                onStartOver={handleStart}
+              />
+            );
         }
         setAppState(AppState.WELCOME);
         return null;
-      default:
+     default:
         return <WelcomeScreen onStart={handleStart} />;
     }
   };

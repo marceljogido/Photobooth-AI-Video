@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { generateMotionVideo } from '../services/geminiService';
 import { KlgLogo } from './icons/KlgLogo';
 import { Spinner } from './icons/Spinner';
@@ -20,6 +20,7 @@ const loadingMessages = [
 
 const ProcessingScreen: React.FC<ProcessingScreenProps> = ({ imageSrc, onComplete, onError }) => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const hasRequested = useRef(false);
 
   useEffect(() => {
     const messageInterval = setInterval(() => {
@@ -30,6 +31,11 @@ const ProcessingScreen: React.FC<ProcessingScreenProps> = ({ imageSrc, onComplet
   }, []);
 
   useEffect(() => {
+    if (hasRequested.current) {
+      return;
+    }
+    hasRequested.current = true;
+
     console.log("Memulai proses generateMotionVideo di ProcessingScreen");
     const processImage = async () => {
       try {
