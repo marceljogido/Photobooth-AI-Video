@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const { getUploadsStaticRoot } = require('./utils/storageConfig');
 const videosRouter = require('./routes/videos');
 
 const app = express();
@@ -15,7 +16,8 @@ app.use(express.json());
 app.use(['/api/videos', '/videos'], videosRouter);
 
 // Serve uploaded videos
-app.use('/uploads', express.static('uploads'));
+const uploadsStaticRoot = getUploadsStaticRoot();
+app.use('/uploads', express.static(uploadsStaticRoot));
 
 app.listen(PORT, () => {
   console.log(`Server backend berjalan di port ${PORT}`);

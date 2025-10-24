@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { applyStyleToImage } from '../services/geminiService';
 import { Spinner } from './icons/Spinner';
 import { Orientation } from '../types';
@@ -24,26 +24,53 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastRequestKeyRef = useRef<string | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const requestKey = `${imageSrc}::${stylePrompt}`;
+
+    if (lastRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    lastRequestKeyRef.current = requestKey;
     const generateStyledImage = async () => {
       setIsLoading(true);
       setError(null);
+      setIsProcessing(false);
+      setStyledImage(null);
       try {
         const result = await applyStyleToImage(imageSrc, stylePrompt);
+        if (!isMountedRef.current || lastRequestKeyRef.current !== requestKey) {
+          return;
+        }
         setStyledImage(result);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+        if (!isMountedRef.current || lastRequestKeyRef.current !== requestKey) {
+          return;
+        }
         setError(errorMessage);
         // Optionally call the main error handler to bubble up
         // onError(errorMessage); 
       } finally {
+        if (!isMountedRef.current || lastRequestKeyRef.current !== requestKey) {
+          return;
+        }
         setIsLoading(false);
       }
     };
 
     generateStyledImage();
-  }, [imageSrc, stylePrompt, onError]);
+  }, [imageSrc, stylePrompt]);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4">

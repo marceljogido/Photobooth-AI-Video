@@ -116,7 +116,7 @@ export const generateMotionVideo = async (
 };
 
 // Fungsi baru untuk upload video ke server
-export const uploadVideoToServer = async (videoUrl: string): Promise<string> => {
+export const uploadVideoToServer = async (videoUrl: string, orientation: Orientation): Promise<string> => {
   try {
     console.log("Memulai upload video ke server, URL:", videoUrl);
     
@@ -131,6 +131,7 @@ export const uploadVideoToServer = async (videoUrl: string): Promise<string> => 
     
     // Buat FormData untuk upload
     const formData = new FormData();
+    formData.append('orientation', orientation);
     formData.append('video', blob, 'generated-video.mp4');
     
     // Kirim ke endpoint upload server

@@ -4,6 +4,26 @@ const path = require('path');
 const fs = require('fs');
 const ftp = require('basic-ftp');
 const { v4: uuidv4 } = require('uuid');
+const {
+  getUploadDir,
+  getWatermarkPath,
+  isWatermarkEnabled,
+} = require('../utils/storageConfig');
+const { applyWatermark } = require('../utils/videoProcessor');
+
+const normalizeFilePrefix = (value) => {
+  const fallback = 'digiOH';
+  if (!value) {
+    return fallback;
+  }
+  const sanitized = value.toString().trim();
+  if (!sanitized) {
+    return fallback;
+  }
+  return sanitized.replace(/[^a-z0-9-_]/gi, '_');
+};
+
+const fileNamePrefix = normalizeFilePrefix(process.env.FILE_NAME_PREFIX);
 
 const router = express.Router();
 
@@ -29,8 +49,21 @@ const buildDownloadUrl = (req, filename) => {
   return `${protocol}://${host}${downloadPath}`;
 };
 
+// Konfigurasi direktori upload & watermark
+const uploadDir = getUploadDir();
+const watermarkConfig = {
+  enabled: isWatermarkEnabled(),
+  path: getWatermarkPath(),
+  envValue: process.env.WATERMARK_FILE_PATH || null,
+};
+
+if (watermarkConfig.enabled && !watermarkConfig.path) {
+  console.warn(
+    'WATERMARK_ENABLED=true tetapi WATERMARK_FILE_PATH tidak valid. Watermark akan diabaikan.'
+  );
+}
+
 // Buat direktori uploads/videos jika belum ada
-const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'videos');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -42,7 +75,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Gunakan UUID untuk nama file unik
-    const uniqueName = `${uuidv4()}_${Date.now()}${path.extname(file.originalname)}`;
+    const ext = path.extname(file.originalname);
+    const uniqueName = `${fileNamePrefix}_${uuidv4()}_${Date.now()}${ext}`;
     cb(null, uniqueName);
   }
 });
@@ -142,10 +176,30 @@ router.post('/upload', upload.single('video'), async (req, res) => {
     const videoId = req.file.filename.split('_')[0];
     const filePath = path.join(uploadDir, req.file.filename);
 
+    const orientationInput =
+      typeof req.body?.orientation === 'string' ? req.body.orientation.toLowerCase() : undefined;
+    const normalizedOrientation =
+      orientationInput === 'portrait' || orientationInput === 'landscape' ? orientationInput : undefined;
+
     if (fs.existsSync(filePath)) {
       console.log('File tersimpan di server lokal:', filePath);
     } else {
       console.warn('File TIDAK ditemukan di server lokal setelah upload:', filePath);
+    }
+
+    if (watermarkConfig.enabled && watermarkConfig.path) {
+      try {
+        console.log(
+          'Menerapkan watermark pada file:',
+          req.file.filename,
+          'orientasi:',
+          normalizedOrientation ?? 'auto-detect'
+        );
+        await applyWatermark(filePath, watermarkConfig.path, { orientation: normalizedOrientation });
+        console.log('Watermark berhasil diterapkan pada file:', req.file.filename);
+      } catch (wmError) {
+        console.error('Gagal menerapkan watermark. File asli tetap digunakan.', wmError);
+      }
     }
 
     const ftpConfig = getFtpConfig();
@@ -204,7 +258,11 @@ router.post('/upload', upload.single('video'), async (req, res) => {
       success: true,
       videoId,
       downloadUrl,
-      storage
+      storage,
+      watermark: {
+        enabled: watermarkConfig.enabled,
+        path: watermarkConfig.enabled ? watermarkConfig.envValue : null,
+      },
     });
   } catch (error) {
     console.error('Terjadi kesalahan saat memproses upload video:', error);

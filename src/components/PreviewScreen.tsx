@@ -18,11 +18,9 @@ const PreviewScreen: React.FC<PreviewScreenProps> = ({ imageSrc, onRetake, onCon
       <h2 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFC371] to-[#F9D423] mb-4 text-center">
         Preview & Confirm
       </h2>
-      <div
-        className={`w-full ${containerWidthClass} rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6`}
-        style={{ aspectRatio }}
-      >
-        <img src={imageSrc} alt="Captured preview" className="w-full h-full object-cover transform -scale-x-100" />
+      <div className={`w-full ${containerWidthClass} rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6`}
+        style={{ aspectRatio }}>
+        <img src={imageSrc} alt="Captured preview" className="w-full h-full object-cover transform -scale-x-100"/>
       </div>
 
       {error && (

@@ -84,6 +84,7 @@ const App: React.FC = () => {
   const handleProcessingComplete = useCallback(async (videoUrl: string) => {
     console.log("handleProcessingComplete dipanggil, videoUrl:", videoUrl);
     try {
+      const effectiveOrientation = styledImageOrientation ?? imageOrientation;
       // Tampilkan video sementara dari AI di ResultScreen sambil menyiapkan URL server
       releasePlaybackUrl();
       setPlaybackVideoUrl(videoUrl);
@@ -95,7 +96,7 @@ const App: React.FC = () => {
       
       // Upload ke server di background
       try {
-        const serverVideoUrl = await uploadVideoToServer(videoUrl);
+        const serverVideoUrl = await uploadVideoToServer(videoUrl, effectiveOrientation);
         console.log("Upload ke server berhasil, serverVideoUrl:", serverVideoUrl);
 
         // Simpan URL server hanya untuk keperluan sharing (QR & download)
@@ -116,7 +117,7 @@ const App: React.FC = () => {
       setIsUploadingVideo(false);
       setUploadError(null);
     }
-  }, [releasePlaybackUrl]);
+  }, [releasePlaybackUrl, styledImageOrientation, imageOrientation]);
 
   const handleRetryUpload = useCallback(async () => {
     if (!playbackVideoUrl) {
@@ -126,7 +127,8 @@ const App: React.FC = () => {
     try {
       setIsUploadingVideo(true);
       setUploadError(null);
-      const serverVideoUrl = await uploadVideoToServer(playbackVideoUrl);
+      const effectiveOrientation = styledImageOrientation ?? imageOrientation;
+      const serverVideoUrl = await uploadVideoToServer(playbackVideoUrl, effectiveOrientation);
       console.log("Retry upload berhasil, serverVideoUrl:", serverVideoUrl);
       setShareableVideoUrl(serverVideoUrl);
     } catch (retryError) {
@@ -135,7 +137,7 @@ const App: React.FC = () => {
     } finally {
       setIsUploadingVideo(false);
     }
-  }, [playbackVideoUrl]);
+  }, [playbackVideoUrl, styledImageOrientation, imageOrientation]);
 
   const handleProcessingError = useCallback((errorMessage: string) => {
     setError(errorMessage);
