@@ -43,6 +43,26 @@ Buat file `.env.local` di root direktori:
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
+Jika backend dijalankan secara terpisah, buat file `.env` di folder `backend/` untuk menyimpan konfigurasi server. Contoh:
+```env
+# Server config
+PORT=3001
+
+# (Opsional) Konfigurasi URL publik untuk fallback ke penyimpanan lokal
+PUBLIC_BASE_URL=https://your-backend-domain.example.com
+
+# (Opsional) Upload langsung ke FTP
+FTP_HOST=ftp.example.com
+FTP_USER=your_ftp_username
+FTP_PASSWORD=your_ftp_password
+FTP_PORT=21
+FTP_REMOTE_PATH=/path/to/remote/folder/
+FTP_DISPLAY_URL=https://your-public-url/
+# FTP_SECURE=true          # set ke 'true' untuk FTPS eksplisit atau 'implicit' untuk FTPS implisit
+# FTP_KEEP_LOCAL_COPY=true # set ke 'true' jika ingin tetap menyimpan file di server setelah upload FTP
+# FTP_DEBUG=true           # aktifkan log detail dari client FTP
+```
+
 ### 3. Run Development Servers
 
 **Backend Server** (Terminal 1):
@@ -147,6 +167,13 @@ mkdir -p uploads/videos
 chown -R www-data:www-data uploads/
 chmod -R 755 uploads/
 ```
+
+### FTP Upload (Opsional)
+- Jika variabel FTP dikonfigurasi, backend akan mengunggah file hasil AI ke server FTP setelah menerima upload dari frontend.
+- URL yang dikembalikan ke frontend akan menggunakan `FTP_DISPLAY_URL` sebagai base path. Pastikan jalur FTP dan jalur publik berada pada struktur yang sama.
+- Set `FTP_KEEP_LOCAL_COPY=true` apabila tetap ingin menyimpan file di server lokal sebagai backup. Default-nya file lokal akan dihapus setelah upload FTP berhasil.
+- Untuk server FTPS, set `FTP_SECURE=true` (FTPS eksplisit) atau `FTP_SECURE=implicit` untuk FTPS implisit.
+- Jika upload FTP gagal, server otomatis fallback ke penyimpanan lokal (`/uploads/videos/`) sehingga alur aplikasi tetap berfungsi.
 
 ## Fungsionalitas QR Code
 

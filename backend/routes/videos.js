@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const ftp = require('basic-ftp');
 const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
@@ -58,36 +59,157 @@ const upload = multer({
   }
 });
 
+const fsPromises = fs.promises;
+
+const ensureTrailingSlash = (value) => (value.endsWith('/') ? value : `${value}/`);
+
+const normalizeRemotePath = (value = '') => {
+  const sanitized = value.replace(/\\/g, '/').trim();
+  if (!sanitized || sanitized === '/') {
+    return '';
+  }
+  return sanitized.replace(/^\/+|\/+$/g, '');
+};
+
+const normalizeSecureOption = (value) => {
+  if (!value) {
+    return false;
+  }
+  const lowered = value.toLowerCase();
+  if (lowered === 'implicit') {
+    return 'implicit';
+  }
+  if (lowered === 'true') {
+    return true;
+  }
+  return false;
+};
+
+const buildFtpDownloadUrl = (baseUrl, remotePath, filename) => {
+  try {
+    const sanitizedBase = ensureTrailingSlash(baseUrl);
+    const remoteSegment = remotePath ? `${remotePath.replace(/^\/+/, '')}/` : '';
+    return new URL(`${remoteSegment}${filename}`, sanitizedBase).toString();
+  } catch (error) {
+    console.error('FTP_DISPLAY_URL invalid, falling back to local URL.', error);
+    return null;
+  }
+};
+
+const getFtpConfig = () => {
+  const {
+    FTP_HOST,
+    FTP_USER,
+    FTP_PASSWORD,
+    FTP_PORT,
+    FTP_REMOTE_PATH,
+    FTP_DISPLAY_URL,
+    FTP_SECURE,
+    FTP_KEEP_LOCAL_COPY,
+    FTP_DEBUG
+  } = process.env;
+
+  if (!FTP_HOST || !FTP_USER || !FTP_PASSWORD || !FTP_REMOTE_PATH || !FTP_DISPLAY_URL) {
+    return null;
+  }
+
+  const parsedPort = Number(FTP_PORT);
+  const port = Number.isSafeInteger(parsedPort) && parsedPort > 0 ? parsedPort : 21;
+
+  return {
+    host: FTP_HOST,
+    user: FTP_USER,
+    password: FTP_PASSWORD,
+    port,
+    remotePath: normalizeRemotePath(FTP_REMOTE_PATH),
+    displayUrl: FTP_DISPLAY_URL,
+    secure: normalizeSecureOption(FTP_SECURE),
+    keepLocalCopy: FTP_KEEP_LOCAL_COPY === 'true',
+    debug: FTP_DEBUG === 'true'
+  };
+};
+
 // Endpoint untuk upload video
-router.post('/upload', upload.single('video'), (req, res) => {
-  console.log("Menerima permintaan upload video");
+router.post('/upload', upload.single('video'), async (req, res) => {
+  console.log('Menerima permintaan upload video');
   if (!req.file) {
-    console.log("Tidak ada file dalam permintaan upload");
+    console.log('Tidak ada file dalam permintaan upload');
     return res.status(400).json({ error: 'Tidak ada file yang diupload' });
   }
-  
-  console.log("File berhasil diupload:", req.file.filename);
-  const videoId = req.file.filename.split('_')[0]; // Ambil UUID dari nama file
-  
-  // Log tambahan untuk memastikan file benar-benar ada di sistem file
-  const fs = require('fs');
-  const path = require('path');
-  const filePath = path.join(__dirname, '..', '..', 'uploads', 'videos', req.file.filename);
-  
-  if (fs.existsSync(filePath)) {
-    console.log("File benar-benar ada di sistem:", filePath);
-  } else {
-    console.log("File TIDAK DITEMUKAN di sistem:", filePath);
+
+  try {
+    console.log('File berhasil diupload:', req.file.filename);
+    const videoId = req.file.filename.split('_')[0];
+    const filePath = path.join(uploadDir, req.file.filename);
+
+    if (fs.existsSync(filePath)) {
+      console.log('File tersimpan di server lokal:', filePath);
+    } else {
+      console.warn('File TIDAK ditemukan di server lokal setelah upload:', filePath);
+    }
+
+    const ftpConfig = getFtpConfig();
+    const fallbackDownloadUrl = buildDownloadUrl(req, req.file.filename);
+    let downloadUrl = fallbackDownloadUrl;
+    let storage = 'local';
+
+    if (ftpConfig) {
+      console.log('Konfigurasi FTP terdeteksi. Memulai upload ke FTP...');
+      const client = new ftp.Client();
+      client.ftp.verbose = ftpConfig.debug;
+
+      try {
+        await client.access({
+          host: ftpConfig.host,
+          port: ftpConfig.port,
+          user: ftpConfig.user,
+          password: ftpConfig.password,
+          secure: ftpConfig.secure
+        });
+
+        if (ftpConfig.remotePath) {
+          await client.ensureDir(ftpConfig.remotePath);
+        }
+
+        await client.uploadFrom(filePath, req.file.filename);
+        console.log('Upload ke FTP berhasil untuk file:', req.file.filename);
+
+        const ftpDownloadUrl = buildFtpDownloadUrl(
+          ftpConfig.displayUrl,
+          ftpConfig.remotePath,
+          req.file.filename
+        );
+
+        if (ftpDownloadUrl) {
+          downloadUrl = ftpDownloadUrl;
+          storage = 'ftp';
+        }
+
+        if (!ftpConfig.keepLocalCopy) {
+          try {
+            await fsPromises.unlink(filePath);
+            console.log('File lokal dihapus setelah upload FTP:', filePath);
+          } catch (removeError) {
+            console.warn('Gagal menghapus file lokal setelah upload FTP:', removeError);
+          }
+        }
+      } catch (ftpError) {
+        console.error('Upload ke FTP gagal. Menggunakan penyimpanan lokal sebagai fallback.', ftpError);
+      } finally {
+        client.close();
+      }
+    }
+
+    res.json({
+      success: true,
+      videoId,
+      downloadUrl,
+      storage
+    });
+  } catch (error) {
+    console.error('Terjadi kesalahan saat memproses upload video:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan saat memproses upload video' });
   }
-  
-  // Dalam production, kita akan mengakses file video melalui Nginx
-  // Format URL: /uploads/videos/[filename]
-  // Nginx akan menyelesaikan permintaan ini langsung dari folder uploads
-  res.json({ 
-    success: true, 
-    videoId: videoId,
-    downloadUrl: buildDownloadUrl(req, req.file.filename)
-  });
 });
 
 // Endpoint untuk download video berdasarkan nama file

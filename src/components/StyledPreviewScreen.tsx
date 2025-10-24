@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { applyStyleToImage } from '../services/geminiService';
 import { Spinner } from './icons/Spinner';
+import { Orientation } from '../types';
 
 interface StyledPreviewScreenProps {
   imageSrc: string;
   stylePrompt: string;
-  onConfirm: (styledImage: string) => void;
+  onConfirm: (styledImage: string, orientation: Orientation) => void;
   onBack: () => void;
   onError: (error: string) => void;
+  orientation: Orientation;
 }
 
 const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
@@ -16,6 +18,7 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
   onConfirm,
   onBack,
   onError,
+  orientation,
 }) => {
   const [styledImage, setStyledImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +51,10 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
         Styled Preview
       </h2>
 
-      <div className="w-full max-w-2xl aspect-[16/9] rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6 flex items-center justify-center bg-black/20">
+      <div
+        className={`w-full ${orientation === 'portrait' ? 'max-w-xl' : 'max-w-2xl'} rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6 flex items-center justify-center bg-black/20`}
+        style={{ aspectRatio: orientation === 'portrait' ? '9 / 16' : '16 / 9' }}
+      >
         {isLoading && (
           <div className="flex flex-col items-center text-center p-4">
             <Spinner className="w-16 h-16 text-[#F9D423] mb-4" />
@@ -68,7 +74,14 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
           </div>
         )}
         {!isLoading && styledImage && (
-          <img src={styledImage} alt="Styled preview" className="w-full h-full object-cover" />
+          <>
+            <img src={styledImage} alt="Styled preview" className="w-full h-full object-cover" />
+            <img
+              src="/logowatermark.png"
+              alt="DigiOH Watermark"
+              className="absolute bottom-4 right-4 w-20 md:w-24 object-contain drop-shadow-lg pointer-events-none select-none opacity-90"
+            />
+          </>
         )}
       </div>
 
@@ -85,7 +98,7 @@ const StyledPreviewScreen: React.FC<StyledPreviewScreenProps> = ({
             if (styledImage && !isProcessing) {
               console.log("Tombol 'Create Motion Portrait' diklik");
               setIsProcessing(true);
-              onConfirm(styledImage);
+              onConfirm(styledImage, orientation);
             }
           }}
           disabled={isLoading || !!error || !styledImage || isProcessing}

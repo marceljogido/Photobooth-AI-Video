@@ -23,6 +23,24 @@ const styles = [
   { name: 'Golden Age Comic', prompt: 'Classic 1960s comic book style. Use bold inks, limited colors, and visible halftone dots for shading.', icon: ComicIcon, color: 'text-[#5DADE2]' },
   { name: 'Gothic Oil Painting', prompt: 'A moody, classical oil painting. Dramatic lighting, deep shadows, rich textures, and a painterly quality.', icon: PaintingIcon, color: 'text-[#C0392B]' },
   { name: 'Holographic Glitch', prompt: 'A futuristic, holographic projection with digital glitch effects. Made of shimmering blue light with scan lines.', icon: HologramIcon, color: 'text-[#76D7C4]' },
+  { 
+    name: 'Blockbuster Hero', 
+    prompt: 'Hyper-realistic live-action style, like a blockbuster superhero film. Photorealistic skin and suit textures, dramatic cinematic lighting, motion blur, and professional color grading.', 
+    icon: HologramIcon, // Ganti dengan nama ikon Anda
+    color: 'text-[#F39C12]' 
+  },
+  { 
+    name: 'Modern Comic', 
+    prompt: 'A modern, dynamic comic book style from the 90s/2000s. Sharp, detailed inks, complex cross-hatching for shadows, and vibrant, glossy, digitally-painted colors. Highly energetic poses.', 
+    icon: HologramIcon, // Ganti dengan nama ikon Anda
+    color: 'text-[#E74C3C]' 
+  },
+  { 
+    name: 'Gritty Noir', 
+    prompt: 'A gritty, high-contrast noir style. Deep, oppressive shadows, desaturated colors with occasional pops of a single color (like red), and a sense of urban decay. Think "Sin City" or a dark detective story.', 
+    icon: HologramIcon, // Ganti dengan nama ikon Anda
+    color: 'text-[#95A5A6]'
+  },
 ];
 
 const StyleSelectionScreen: React.FC<StyleSelectionScreenProps> = ({ onStyleSelect }) => {

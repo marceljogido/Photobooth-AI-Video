@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { AppState } from './types';
+import React, { useState, useCallback, useRef } from 'react';
+import { AppState, Orientation } from './types';
 import WelcomeScreen from './components/WelcomeScreen';
 import PhotoCapture from './components/PhotoCapture';
 import PreviewScreen from './components/PreviewScreen';
@@ -14,26 +14,40 @@ const App: React.FC = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [selectedStylePrompt, setSelectedStylePrompt] = useState<string | null>(null);
   const [styledImage, setStyledImage] = useState<string | null>(null);
+  const [styledImageOrientation, setStyledImageOrientation] = useState<Orientation | null>(null);
   const [playbackVideoUrl, setPlaybackVideoUrl] = useState<string | null>(null);
   const [shareableVideoUrl, setShareableVideoUrl] = useState<string | null>(null);
   const [isUploadingVideo, setIsUploadingVideo] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [imageOrientation, setImageOrientation] = useState<Orientation>('landscape');
+  const playbackUrlRef = useRef<string | null>(null);
+
+  const releasePlaybackUrl = useCallback(() => {
+    const currentUrl = playbackUrlRef.current;
+    if (currentUrl && currentUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    playbackUrlRef.current = null;
+  }, []);
 
   const handleStart = useCallback(() => {
+    releasePlaybackUrl();
     setAppState(AppState.CAPTURE);
     setCapturedImage(null);
     setSelectedStylePrompt(null);
     setStyledImage(null);
+    setStyledImageOrientation(null);
     setPlaybackVideoUrl(null);
     setShareableVideoUrl(null);
     setIsUploadingVideo(false);
     setUploadError(null);
     setError(null);
-  }, []);
+  }, [releasePlaybackUrl]);
 
-  const handlePhotoCaptured = useCallback((image: string) => {
+  const handlePhotoCaptured = useCallback((image: string, orientation: Orientation) => {
     setCapturedImage(image);
+    setImageOrientation(orientation);
     setAppState(AppState.PREVIEW);
   }, []);
 
@@ -58,10 +72,12 @@ const App: React.FC = () => {
     setAppState(AppState.STYLE_SELECTION);
     setSelectedStylePrompt(null);
     setStyledImage(null); // Clear previous styled image
+    setStyledImageOrientation(null);
   }, []);
 
-  const handleStyledPreviewConfirm = useCallback((image: string) => {
+  const handleStyledPreviewConfirm = useCallback((image: string, orientation: Orientation) => {
     setStyledImage(image);
+    setStyledImageOrientation(orientation);
     setAppState(AppState.PROCESSING);
   }, []);
 
@@ -69,7 +85,9 @@ const App: React.FC = () => {
     console.log("handleProcessingComplete dipanggil, videoUrl:", videoUrl);
     try {
       // Tampilkan video sementara dari AI di ResultScreen sambil menyiapkan URL server
+      releasePlaybackUrl();
       setPlaybackVideoUrl(videoUrl);
+      playbackUrlRef.current = videoUrl;
       setShareableVideoUrl(null);
       setUploadError(null);
       setIsUploadingVideo(true);
@@ -92,12 +110,13 @@ const App: React.FC = () => {
       console.error("Error dalam handleProcessingComplete:", error);
       setError("Terjadi kesalahan. Silakan coba lagi.");
       setAppState(AppState.PREVIEW);
+      releasePlaybackUrl();
       setPlaybackVideoUrl(null);
       setShareableVideoUrl(null);
       setIsUploadingVideo(false);
       setUploadError(null);
     }
-  }, []);
+  }, [releasePlaybackUrl]);
 
   const handleRetryUpload = useCallback(async () => {
     if (!playbackVideoUrl) {
@@ -120,19 +139,26 @@ const App: React.FC = () => {
 
   const handleProcessingError = useCallback((errorMessage: string) => {
     setError(errorMessage);
+    releasePlaybackUrl();
     setPlaybackVideoUrl(null);
     setShareableVideoUrl(null);
     setIsUploadingVideo(false);
     setUploadError(null);
     setAppState(AppState.PREVIEW); // Go back to original preview on error
-  }, []);
+  }, [releasePlaybackUrl]);
 
   const renderContent = () => {
     switch (appState) {
       case AppState.WELCOME:
         return <WelcomeScreen onStart={handleStart} />;
       case AppState.CAPTURE:
-        return <PhotoCapture onPhotoCaptured={handlePhotoCaptured} />;
+        return (
+          <PhotoCapture
+            onPhotoCaptured={handlePhotoCaptured}
+            orientation={imageOrientation}
+            onOrientationChange={setImageOrientation}
+          />
+        );
       case AppState.PREVIEW:
         if (capturedImage) {
           return (
@@ -141,6 +167,7 @@ const App: React.FC = () => {
               onRetake={handleRetake}
               onConfirm={handleConfirm}
               error={error}
+              orientation={imageOrientation}
             />
           );
         }
@@ -157,6 +184,7 @@ const App: React.FC = () => {
               onConfirm={handleStyledPreviewConfirm}
               onBack={handleStyledPreviewBack}
               onError={handleProcessingError}
+              orientation={imageOrientation}
             />
           );
         }
@@ -164,15 +192,16 @@ const App: React.FC = () => {
         return null;
       case AppState.PROCESSING:
         if(styledImage) {
-            return <ProcessingScreen 
-              imageSrc={styledImage} 
-              onComplete={handleProcessingComplete} 
-              onError={handleProcessingError} 
+            return <ProcessingScreen
+              imageSrc={styledImage}
+              orientation={styledImageOrientation ?? imageOrientation}
+              onComplete={handleProcessingComplete}
+              onError={handleProcessingError}
             />;
       }
       setAppState(AppState.CAPTURE);
       return null;
-    case AppState.RESULT:
+      case AppState.RESULT:
         if(playbackVideoUrl) {
             return (
               <ResultScreen
@@ -182,6 +211,7 @@ const App: React.FC = () => {
                 uploadError={uploadError}
                 onRetryUpload={handleRetryUpload}
                 onStartOver={handleStart}
+                orientation={styledImageOrientation ?? imageOrientation}
               />
             );
         }

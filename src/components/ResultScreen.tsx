@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { KlgLogo } from './icons/KlgLogo';
+import { Orientation } from '../types';
 
 interface ResultScreenProps {
   videoSrc: string;  // Gunakan URL blob untuk playback sementara
@@ -9,6 +10,7 @@ interface ResultScreenProps {
   uploadError: string | null;
   onRetryUpload?: () => void;
   onStartOver: () => void;
+  orientation: Orientation;
 }
 
 const ResultScreen: React.FC<ResultScreenProps> = ({
@@ -18,46 +20,74 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
   uploadError,
   onRetryUpload,
   onStartOver,
+  orientation,
 }) => {
-  // Cleanup URL object jika ini masih blob URL
+  const [computedOrientation, setComputedOrientation] = useState<Orientation>(orientation);
+
   useEffect(() => {
-    return () => {
-      if (videoSrc.startsWith('blob:')) {
-        URL.revokeObjectURL(videoSrc);
-      }
-    };
-  }, [videoSrc]);
+    setComputedOrientation(orientation);
+  }, [orientation, videoSrc]);
+
+  const handleMetadataLoaded = useCallback((event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const target = event.currentTarget;
+    if (target.videoWidth && target.videoHeight) {
+      const ratio = target.videoWidth / target.videoHeight;
+      const detectedOrientation: Orientation = ratio >= 1 ? 'landscape' : 'portrait';
+      setComputedOrientation(detectedOrientation);
+    }
+  }, []);
+
+  const containerOrientation = computedOrientation;
+  const isPortraitLayout = containerOrientation === 'portrait';
 
   return (
-    <div className="w-full h-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 p-4 md:p-8">
-      <div className="relative w-full max-w-xl aspect-[16/9] rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/30 border-2 border-[#8A5FBF]/60 group">
+    <div
+      className={`w-full h-full flex p-4 md:p-8 ${
+        isPortraitLayout
+          ? 'flex-col items-center justify-center gap-6'
+          : 'flex-col md:flex-row items-center justify-center gap-4 md:gap-8'
+      }`}>
+      <div className="flex flex-col items-center text-center max-w-xl ">
+        <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFC371] to-[#F9D423] mb-3">
+          Motion  is Ready!
+        </h2>
+      </div>
+
+      <div
+        className={`relative w-full ${containerOrientation === 'portrait' ? 'max-w-2xl' : 'max-w-3xl'} rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/30 border-2 border-[#8A5FBF]/60 group bg-black`}
+        style={{ aspectRatio: containerOrientation === 'portrait' ? '9 / 16' : '16 / 9' }}>
+          
         <video
           src={videoSrc}
           autoPlay
           loop
           muted
           playsInline
+          onLoadedMetadata={handleMetadataLoaded}
           className="w-full h-full object-cover animate-slow-zoom"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-        
         {/* Animated Effects */}
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-[#F9D423] rounded-full animate-sparkle-1"></div>
         <div className="absolute top-1/2 right-1/4 w-3 h-3 bg-[#77A6F7] rounded-full animate-sparkle-2"></div>
         <div className="absolute bottom-1/4 left-1/3 w-2 h-2 bg-white rounded-full animate-sparkle-3"></div>
 
-        <div className="absolute bottom-4 left-4 flex items-center gap-3">
-          <KlgLogo className="h-8 w-auto text-white/90" />
-          <span className="font-bold text-xl text-white tracking-widest">SUMMIT 2025</span>
+        <div className="absolute bottom-2 right-1 flex items-center gap-3">
+          <img
+            src="/logowatermark.png"
+            alt="DigiOH Logo"
+            className="h-20 w-28 md:w-40 object-contain drop-shadow-lg pointer-events-none select-none"
+          />
+          <span className="font-bold text-xl text-white tracking-widest"></span>
         </div>
       </div>
 
       <div className="flex flex-col items-center text-center max-w-md">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFC371] to-[#F9D423] mb-3">
-          Your Video is Ready!
-        </h2>
+        {/* <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFC371] to-[#F9D423] mb-3">
+          Motion  is Ready!
+        </h2> */}
         <p className="text-base md:text-lg text-[#77A6F7] mb-3 md:mb-4">
-          Scan to Download & Share Your Future Vision!
+          Scan to Download & Share Your Moment!
         </p>
         {!shareableUrl && (
           <p className="text-xs md:text-sm text-white/60 mb-4 md:mb-6">
@@ -123,7 +153,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
           onClick={onStartOver}
           className="px-8 py-3 bg-gray-700 text-white font-semibold text-lg rounded-full hover:bg-gray-600 transition-colors duration-300"
         >
-          Create Another
+          Create Another Motion
         </button>
       </div>
     </div>

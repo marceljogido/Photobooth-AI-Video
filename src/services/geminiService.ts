@@ -1,12 +1,13 @@
 import { GoogleGenAI, Modality } from "@google/genai";
+import { Orientation } from "../types";
 
 // Utility function to convert data URL to base64
 const dataUrlToBase64 = (dataUrl: string): string => {
   return dataUrl.split(',')[1];
 };
 
-const PROMPT = `Take the uploaded photobooth image of the subject and transform it into a 6-second, cinematic, looping video. The video should begin with the subject in a normal, static pose for 1-2 seconds, then subtly transition as their expression shifts to surprise and intense spiciness—eyes widening, face reddening. The subject should then exclaim, "Pedes gilaaakkk!" (meaning "Crazy spicy!"). Immediately after the exclamation, a realistic or cartoon-like burst of fire should emerge from their mouth for 1-2 seconds. The background should retain elements from the original photo but with gentle, ambient motion (e.g., subtle shimmering lights, slow-moving particles). The camera should maintain the original photobooth angle but with subtle cinematic movements like a slow zoom or gentle pan, especially during the expression change and fire effect. Total duration should be approximately 6 seconds.`;
-
+// const PROMPT = `Take the uploaded photobooth image of the subject and transform it into a 8-second, cinematic, looping video. The video should begin with the subject in a normal, static pose for 1-2 seconds, then subtly transition as their expression shifts to surprise and intense spiciness—eyes widening, face reddening. The subject should then exclaim, "Pedes gilaaakkk!" (meaning "Crazy spicy!"). Immediately after the exclamation, a realistic or cartoon-like burst of fire should emerge from their mouth for 1-2 seconds. The background should retain elements from the original photo but with gentle, ambient motion (e.g., subtle shimmering lights, slow-moving particles). The camera should maintain the original photobooth angle but with subtle cinematic movements like a slow zoom or gentle pan, especially during the expression change and fire effect. Total duration should be approximately 8 seconds.`;
+const PROMPT = `Take the uploaded photobooth image of the subject and transform it into an 8-second, cinematic, looping video. The video should begin with the subject in a normal, static pose for 1-2 seconds. Their expression then shifts to shock and awe. Their eyes begin to glow with a bright blue or golden light. The subject looks at their hands (just outside the frame) and gasps, "Ini... kekuatan apa?!" (meaning "What... is this power?!"). As they speak, crackling energy (percikan listrik) starts to form around their shoulders and hair, and their hair begins to gently float upwards. The background from the original photo should distort and warp (efek distorsi) as if reality is bending around them. The camera should perform a slow, dramatic 'dolly zoom' (efek vertigo) to emphasize the transformation. Total duration 8 seconds.`; 
 
 export const applyStyleToImage = async (
   imageSrc: string,
@@ -51,7 +52,8 @@ export const applyStyleToImage = async (
 };
 
 export const generateMotionVideo = async (
-  imageSrc: string
+  imageSrc: string,
+  orientation: Orientation
 ): Promise<string> => {
   if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -63,14 +65,15 @@ export const generateMotionVideo = async (
 
   try {
     let operation = await ai.models.generateVideos({
-      model: 'veo-2.0-generate-001',  
+      model: 'veo-3.1-fast-generate-preview',  
       prompt: PROMPT,
       image: {
         imageBytes: base64ImageData,
         mimeType: 'image/jpeg',
       },
       config: {
-        numberOfVideos: 1
+        numberOfVideos: 1,
+        ...(orientation === 'portrait' ? { aspectRatio: '9:16' } : { aspectRatio: '16:9' }),
       }
     });
 

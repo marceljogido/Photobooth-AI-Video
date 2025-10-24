@@ -20,6 +20,10 @@
         0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
         50% { opacity: 1; transform: scale(1) rotate(180deg); }
       }
+      @keyframes loading-logo-breathe {
+        0%, 100% { transform: scale(1); opacity: 0.85; }
+        50% { transform: scale(1.08); opacity: 1; }
+      }
       .animate-slow-zoom {
         animation: slow-zoom 7s ease-in-out infinite alternate;
       }
@@ -29,6 +33,9 @@
       .animate-sparkle-1 { animation: sparkle 3s ease-in-out infinite 0.5s; }
       .animate-sparkle-2 { animation: sparkle 4s ease-in-out infinite 1s; }
       .animate-sparkle-3 { animation: sparkle 3.5s ease-in-out infinite 1.5s; }
+      .animate-loading-logo {
+        animation: loading-logo-breathe 2.4s ease-in-out infinite;
+      }
     </style>
   <script type="importmap">
 {

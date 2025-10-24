@@ -7,3 +7,5 @@ export enum AppState {
   PROCESSING,
   RESULT,
 }
+
+export type Orientation = 'portrait' | 'landscape';

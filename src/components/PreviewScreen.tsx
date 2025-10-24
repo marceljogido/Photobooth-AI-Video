@@ -1,19 +1,27 @@
 import React from 'react';
+import { Orientation } from '../types';
 
 interface PreviewScreenProps {
   imageSrc: string;
   onRetake: () => void;
   onConfirm: () => void;
   error?: string | null;
+  orientation: Orientation;
 }
 
-const PreviewScreen: React.FC<PreviewScreenProps> = ({ imageSrc, onRetake, onConfirm, error }) => {
+const PreviewScreen: React.FC<PreviewScreenProps> = ({ imageSrc, onRetake, onConfirm, error, orientation }) => {
+  const aspectRatio = orientation === 'portrait' ? '9 / 16' : '16 / 9';
+  const containerWidthClass = orientation === 'portrait' ? 'max-w-xl' : 'max-w-2xl';
+
   return (
     <div className="w-full h-full flex flex-col items-center justify-center p-4">
       <h2 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFC371] to-[#F9D423] mb-4 text-center">
         Preview & Confirm
       </h2>
-      <div className="w-full max-w-2xl aspect-[16/9] rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6">
+      <div
+        className={`w-full ${containerWidthClass} rounded-lg overflow-hidden shadow-2xl shadow-[#8A5FBF]/20 border-2 border-[#8A5FBF]/50 mb-6`}
+        style={{ aspectRatio }}
+      >
         <img src={imageSrc} alt="Captured preview" className="w-full h-full object-cover transform -scale-x-100" />
       </div>
 
